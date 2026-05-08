@@ -8,9 +8,18 @@ load_dotenv()
 
 # Use asyncpg for async operations if needed, but here we use standard psycopg2 for SQLAlchemy sync parts
 # Format: postgresql://user:password@localhost/dbname
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/cloud_sms_db")
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set in .env file")
+
+# Some cloud providers (like Heroku) use 'postgres://' which SQLAlchemy doesn't like, 
+# so we fix it here just in case.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
