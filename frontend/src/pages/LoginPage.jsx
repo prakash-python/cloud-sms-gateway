@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Send } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Mail, ArrowRight, Github } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { Card, CardContent } from '../components/ui/Card';
+import { InputField } from '../components/auth/InputField';
+import { PasswordInput } from '../components/auth/PasswordInput';
 import { useAuth } from '../context/AuthContext';
+import AuthSplitLayout from '../layouts/AuthSplitLayout';
+import toast from 'react-hot-toast';
 
 const LoginPage = () => {
-  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -19,110 +20,79 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-    
     try {
       await login(email, password);
+      toast.success('Authenticated successfully');
       navigate('/dashboard');
     } catch (err) {
-      setError('Invalid email or password. Please try again.');
+      toast.error('Invalid credentials');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
+    <AuthSplitLayout>
+      <div className="mb-10">
+        <h2 className="text-3xl font-bold tracking-tight text-white">Welcome back</h2>
+        <p className="text-slate-400 mt-2 font-medium">Log in to your dashboard to manage your devices.</p>
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md relative z-10"
-      >
-        <div className="flex flex-col items-center mb-8">
-          <Link to="/" className="h-14 w-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-600/40 mb-4 rotate-[-10deg] hover:rotate-0 transition-transform duration-300">
-            <Send className="text-white transform -rotate-45" size={28} />
-          </Link>
-          <h1 className="text-3xl font-bold text-white">Welcome Back</h1>
-          <p className="text-slate-400 mt-2">Enter your credentials to access your account</p>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <InputField
+          label="Email or Username"
+          icon={Mail}
+          type="text"
+          placeholder="name@company.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <div className="space-y-1">
+          <PasswordInput
+            label="Password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <div className="flex items-center justify-between px-1 pt-1">
+            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => setRememberMe(!rememberMe)}>
+              <div className={`h-4 w-4 rounded border flex items-center justify-center transition-all ${rememberMe ? 'bg-blue-600 border-blue-600' : 'border-slate-800 bg-slate-900 group-hover:border-slate-700'}`}>
+                {rememberMe && <div className="h-2 w-2 bg-white rounded-full" />}
+              </div>
+              <span className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors">Remember me</span>
+            </div>
+            <a href="#" className="text-xs text-blue-500 hover:text-blue-400 font-semibold transition-colors tracking-tight">Forgot password?</a>
+          </div>
         </div>
 
-        <Card glass>
-          <CardContent className="p-8">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
-                  {error}
-                </div>
-              )}
+        <Button 
+          type="submit" 
+          className="w-full h-11 text-sm font-bold rounded-xl shadow-lg shadow-blue-600/20" 
+          isLoading={isLoading}
+        >
+          Sign In <ArrowRight className="ml-2" size={16} />
+        </Button>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Email Address</label>
-                <div className="relative group">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors">
-                    <Mail size={18} />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
-                    placeholder="name@company.com"
-                  />
-                </div>
-              </div>
+        <div className="relative py-4">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+          <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#020617] px-2 text-slate-500 font-bold tracking-widest">Or continue with</span></div>
+        </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-300">Password</label>
-                  <a href="#" className="text-xs text-blue-500 hover:underline">Forgot password?</a>
-                </div>
-                <div className="relative group">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors">
-                    <Lock size={18} />
-                  </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-10 pr-12 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
+        <Button variant="secondary" className="w-full h-11 rounded-xl">
+           <Github size={18} className="mr-2" /> GitHub
+        </Button>
+      </form>
 
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-lg" 
-                isLoading={isLoading}
-              >
-                Sign In <ArrowRight className="ml-2" size={18} />
-              </Button>
-            </form>
-
-            <div className="mt-8 text-center">
-              <p className="text-slate-500">
-                Don't have an account?{' '}
-                <Link to="/register" className="text-blue-500 font-semibold hover:underline">
-                  Create an account
-                </Link>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
+      <p className="mt-8 text-center text-slate-400 text-sm">
+        Don't have an account?{' '}
+        <Link to="/register" className="text-white font-bold hover:text-blue-500 transition-colors">
+          Create an account
+        </Link>
+      </p>
+    </AuthSplitLayout>
   );
 };
 

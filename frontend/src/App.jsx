@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -9,15 +9,27 @@ import DashboardLayout from './layouts/DashboardLayout';
 // Pages
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import DashboardHome from './pages/DashboardHome';
+import SimManagement from './pages/SimManagement';
+import GroupsManagement from './pages/GroupsManagement';
+import CampaignAutomation from './pages/CampaignAutomation';
+import DevicesPage from './pages/DevicesPage';
+import IntegrationsPage from './pages/IntegrationsPage';
+import SendSMSPage from './pages/SendSMSPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedLayout = () => {
   const { user, loading } = useAuth();
   
   if (loading) return null;
   if (!user) return <Navigate to="/login" />;
   
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return (
+    <DashboardLayout>
+      <Outlet />
+    </DashboardLayout>
+  );
 };
 
 const App = () => {
@@ -27,9 +39,10 @@ const App = () => {
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1e293b',
+            background: '#0f172a',
             color: '#fff',
-            border: '1px solid #334155'
+            border: '1px solid rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(10px)'
           }
         }} 
       />
@@ -38,44 +51,27 @@ const App = () => {
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<div className="bg-slate-950 min-h-screen flex items-center justify-center text-white">Register Page Implementation</div>} />
+          <Route path="/register" element={<RegisterPage />} />
 
-          {/* Dashboard Routes */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <DashboardHome />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/devices" element={
-            <ProtectedRoute>
-              <div className="p-8"><h1 className="text-2xl font-bold">Device Management</h1></div>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/send-sms" element={
-            <ProtectedRoute>
-              <div className="p-8"><h1 className="text-2xl font-bold">Send SMS</h1></div>
-            </ProtectedRoute>
-          } />
+          {/* Authenticated Dashboard Routes (Nested) */}
+          <Route path="/dashboard" element={<ProtectedLayout />}>
+            <Route index element={<DashboardHome />} />
+            <Route path="sims" element={<SimManagement />} />
+            <Route path="devices" element={<DevicesPage />} />
+            <Route path="groups" element={<GroupsManagement />} />
+            <Route path="campaigns" element={<CampaignAutomation />} />
+            <Route path="integrations" element={<IntegrationsPage />} />
+            <Route path="send-sms" element={<SendSMSPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="logs" element={<div className="p-8"><h1 className="text-2xl font-bold text-white">Message Logs</h1></div>} />
+            <Route path="settings" element={<div className="p-8"><h1 className="text-2xl font-bold text-white">Settings</h1></div>} />
+          </Route>
 
-          <Route path="/campaigns" element={
-            <ProtectedRoute>
-              <div className="p-8"><h1 className="text-2xl font-bold">Campaigns</h1></div>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/logs" element={
-            <ProtectedRoute>
-              <div className="p-8"><h1 className="text-2xl font-bold">Message Logs</h1></div>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <div className="p-8"><h1 className="text-2xl font-bold">Settings</h1></div>
-            </ProtectedRoute>
-          } />
+          {/* Legacy Redirects for compatibility */}
+          <Route path="/devices" element={<Navigate to="/dashboard/devices" replace />} />
+          <Route path="/sims" element={<Navigate to="/dashboard/sims" replace />} />
+          <Route path="/groups" element={<Navigate to="/dashboard/groups" replace />} />
+          <Route path="/campaigns" element={<Navigate to="/dashboard/campaigns" replace />} />
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" />} />

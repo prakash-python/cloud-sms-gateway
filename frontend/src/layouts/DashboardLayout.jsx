@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Layout, Send, Smartphone, History, Settings, LogOut, 
-  Menu, X, Bell, User, MessageSquare, BarChart3
+  LayoutDashboard, Send, Smartphone, History, Settings, LogOut, 
+  Menu, X, Bell, User, MessageSquare, BarChart3,
+  Cpu, Users, Zap, Database
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -25,17 +26,20 @@ const SidebarItem = ({ icon: Icon, label, path, active, onClick }) => (
 const DashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { pathname } = useLocation();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const menuItems = [
-    { icon: Layout, label: 'Dashboard', path: '/dashboard' },
-    { icon: Smartphone, label: 'Devices', path: '/devices' },
-    { icon: Send, label: 'Send SMS', path: '/send-sms' },
-    { icon: MessageSquare, label: 'Campaigns', path: '/campaigns' },
-    { icon: History, label: 'Message Logs', path: '/logs' },
-    { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: LayoutDashboard, label: 'Overview', path: '/dashboard' },
+    { icon: Cpu, label: 'SIM Cards', path: '/dashboard/sims' },
+    { icon: Smartphone, label: 'Devices', path: '/dashboard/devices' },
+    { icon: Users, label: 'Contact Groups', path: '/dashboard/groups' },
+    { icon: Zap, label: 'Campaigns', path: '/dashboard/campaigns' },
+    { icon: Database, label: 'Integrations', path: '/dashboard/integrations' },
+    { icon: Send, label: 'Send SMS', path: '/dashboard/send-sms' },
+    { icon: History, label: 'Message Logs', path: '/dashboard/logs' },
+    { icon: BarChart3, label: 'Analytics', path: '/dashboard/analytics' },
+    { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
   ];
 
   const handleLogout = () => {
@@ -107,8 +111,10 @@ const DashboardLayout = ({ children }) => {
             <div className="h-8 w-[1px] bg-slate-800 mx-2" />
             <div className="flex items-center space-x-3 pl-2">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-white">John Doe</p>
-                <p className="text-xs text-slate-500">Premium Plan</p>
+                <p className="text-sm font-medium text-white">
+                  {user?.first_name ? `${user.first_name} ${user.last_name}` : user?.username || 'User'}
+                </p>
+                <p className="text-xs text-slate-500">{user?.email}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-500">
                 <User size={20} />
