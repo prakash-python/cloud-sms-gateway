@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 from .database import engine, Base, SessionLocal, get_db
 from app.websocket.manager import manager
 from .models import models
-from .routes import auth, sms, devices, roles, sims, groups, campaigns
+from .routes import auth, sms, devices, roles, sims, groups, campaigns, integrations
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -61,6 +61,7 @@ app.include_router(devices.router, prefix="/api/devices", tags=["Devices"])
 app.include_router(sims.router, prefix="/api/sims", tags=["SIM Management"])
 app.include_router(groups.router, prefix="/api/groups", tags=["Group Management"])
 app.include_router(campaigns.router, prefix="/api/campaigns", tags=["Campaigns"])
+app.include_router(integrations.router, prefix="/api/integrations", tags=["Integrations"])
 
 @app.get("/")
 async def root():

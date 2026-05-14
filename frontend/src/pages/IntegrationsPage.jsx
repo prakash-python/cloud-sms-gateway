@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Database, Link as LinkIcon, Globe, Shield, Cpu, Code } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-const IntegrationCard = ({ icon: Icon, title, description, status }) => (
+const IntegrationCard = ({ icon: Icon, title, description, status, link }) => (
   <motion.div 
     whileHover={{ y: -5 }}
     className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-6 rounded-2xl hover:border-blue-500/50 transition-all group"
@@ -19,9 +20,15 @@ const IntegrationCard = ({ icon: Icon, title, description, status }) => (
     </div>
     <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
     <p className="text-sm text-slate-400 leading-relaxed mb-6">{description}</p>
-    <button className="text-sm font-bold text-blue-500 hover:text-blue-400 transition-colors flex items-center">
-      Configure <LinkIcon size={14} className="ml-2" />
-    </button>
+    {link ? (
+      <Link to={link} className="text-sm font-bold text-blue-500 hover:text-blue-400 transition-colors flex items-center">
+        Configure <LinkIcon size={14} className="ml-2" />
+      </Link>
+    ) : (
+      <button className="text-sm font-bold text-slate-500 cursor-not-allowed flex items-center">
+        Coming Soon <LinkIcon size={14} className="ml-2" />
+      </button>
+    )}
   </motion.div>
 );
 
@@ -39,18 +46,17 @@ const IntegrationsPage = () => {
           title="External Databases"
           description="Connect PostgreSQL, MySQL or MongoDB to automatically fetch contacts for your campaigns."
           status="Active"
+          link="/dashboard/integrations/db"
         />
         <IntegrationCard 
           icon={Globe}
           title="Webhooks"
           description="Send real-time delivery reports and incoming SMS notifications to your external servers."
-          status="Setup Required"
         />
         <IntegrationCard 
           icon={Code}
           title="REST API"
           description="Full access to send messages and manage devices programmatically via our secure API."
-          status="Active"
         />
         <IntegrationCard 
           icon={Shield}

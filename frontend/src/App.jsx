@@ -21,6 +21,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import SetupGuidePage from './pages/SetupGuidePage';
 import MessageLogs from './pages/MessageLogs';
 import SettingsPage from './pages/SettingsPage';
+import DatabaseIntegration from './pages/DatabaseIntegration';
 
 const ProtectedLayout = () => {
   const { user, loading } = useAuth();
@@ -65,6 +66,7 @@ const App = () => {
             <Route path="groups" element={<GroupsManagement />} />
             <Route path="campaigns" element={<CampaignAutomation />} />
             <Route path="integrations" element={<IntegrationsPage />} />
+            <Route path="integrations/db" element={<DatabaseIntegration />} />
             <Route path="send-sms" element={<SendSMSPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="logs" element={<MessageLogs />} />

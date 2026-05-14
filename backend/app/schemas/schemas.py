@@ -117,14 +117,16 @@ class CampaignRecipient(BaseModel):
 
 # DB Connection Schemas
 class DBConnectionBase(BaseModel):
-    db_type: str
-    host: str
-    port: int
-    database_name: str
-    username: str
+    db_type: Optional[str] = "postgresql"
+    host: Optional[str] = None
+    port: Optional[int] = None
+    database_name: Optional[str] = None
+    username: Optional[str] = None
+    connection_url: Optional[str] = None
     table_name: str
     phone_column: str
-    name_column: Optional[str] = None
+    first_name_column: Optional[str] = None
+    last_name_column: Optional[str] = None
 
 class DBConnectionCreate(DBConnectionBase):
     password: str

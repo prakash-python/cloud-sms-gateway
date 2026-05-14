@@ -113,9 +113,11 @@ class DatabaseConnection(Base):
     database_name = Column(String)
     username = Column(String)
     encrypted_password = Column(String)
+    connection_url = Column(String, nullable=True)
     table_name = Column(String)
     phone_column = Column(String)
-    name_column = Column(String)
+    first_name_column = Column(String, nullable=True)
+    last_name_column = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     owner = relationship("User", back_populates="database_connections")
