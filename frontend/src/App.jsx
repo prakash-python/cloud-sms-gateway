@@ -18,6 +18,9 @@ import DevicesPage from './pages/DevicesPage';
 import IntegrationsPage from './pages/IntegrationsPage';
 import SendSMSPage from './pages/SendSMSPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import SetupGuidePage from './pages/SetupGuidePage';
+import MessageLogs from './pages/MessageLogs';
+import SettingsPage from './pages/SettingsPage';
 
 const ProtectedLayout = () => {
   const { user, loading } = useAuth();
@@ -58,13 +61,14 @@ const App = () => {
             <Route index element={<DashboardHome />} />
             <Route path="sims" element={<SimManagement />} />
             <Route path="devices" element={<DevicesPage />} />
+            <Route path="setup" element={<SetupGuidePage />} />
             <Route path="groups" element={<GroupsManagement />} />
             <Route path="campaigns" element={<CampaignAutomation />} />
             <Route path="integrations" element={<IntegrationsPage />} />
             <Route path="send-sms" element={<SendSMSPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="logs" element={<div className="p-8"><h1 className="text-2xl font-bold text-white">Message Logs</h1></div>} />
-            <Route path="settings" element={<div className="p-8"><h1 className="text-2xl font-bold text-white">Settings</h1></div>} />
+            <Route path="logs" element={<MessageLogs />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           {/* Legacy Redirects for compatibility */}

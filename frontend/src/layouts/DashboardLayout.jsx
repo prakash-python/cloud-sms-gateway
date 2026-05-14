@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Send, Smartphone, History, Settings, LogOut, 
   Menu, X, Bell, User, MessageSquare, BarChart3,
-  Cpu, Users, Zap, Database
+  Cpu, Users, Zap, Database, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -38,6 +38,7 @@ const DashboardLayout = ({ children }) => {
     { icon: Database, label: 'Integrations', path: '/dashboard/integrations' },
     { icon: Send, label: 'Send SMS', path: '/dashboard/send-sms' },
     { icon: History, label: 'Message Logs', path: '/dashboard/logs' },
+    { icon: ShieldCheck, label: 'Setup Guide', path: '/dashboard/setup' },
     { icon: BarChart3, label: 'Analytics', path: '/dashboard/analytics' },
     { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
   ];

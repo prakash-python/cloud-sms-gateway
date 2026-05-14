@@ -46,6 +46,8 @@ def get_usage_analytics(db: Session = Depends(get_db), current_user: models.User
         usage_pct = (sim.sms_sent_today / sim.daily_limit) * 100 if sim.daily_limit > 0 else 0
         analytics.append({
             "sim_id": sim.id,
+            "device_id": sim.device_id,
+            "sim_slot": sim.sim_slot,
             "phone": sim.phone_number,
             "carrier": sim.carrier_name,
             "sent": sim.sms_sent_today,

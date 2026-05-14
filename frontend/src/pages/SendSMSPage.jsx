@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Send, Users, Smartphone, MessageSquare, Info, History, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Users, Smartphone, MessageSquare, Info, History, Loader2, Zap, ShieldCheck } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { Card, CardContent } from '../components/ui/Card';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -17,11 +18,9 @@ const SendSMSPage = () => {
     const fetchDevices = async () => {
       try {
         const res = await api.get('/devices/');
-        // Only show online devices
         setDevices(res.data.filter(d => d.is_online));
       } catch (err) {
         console.error('Failed to fetch devices:', err);
-        toast.error('Could not load online devices');
       } finally {
         setFetchingDevices(false);
       }
@@ -30,9 +29,9 @@ const SendSMSPage = () => {
   }, []);
 
   const handleSend = async () => {
-    if (!selectedDeviceId) return toast.error('Please select an online device');
-    if (!recipient) return toast.error('Please enter a recipient number');
-    if (!message) return toast.error('Message body cannot be empty');
+    if (!selectedDeviceId) return toast.error('Please select an active gateway');
+    if (!recipient) return toast.error('Recipient number is required');
+    if (!message) return toast.error('Message body is empty');
 
     setLoading(true);
     try {
@@ -41,149 +40,148 @@ const SendSMSPage = () => {
         phone_number: recipient,
         message: message
       });
-      toast.success('Message dispatched to gateway!');
+      toast.success('Message dispatched successfully');
       setMessage('');
       setRecipient('');
     } catch (err) {
-      console.error('Send error:', err);
-      toast.error(err.response?.data?.detail || 'Failed to send message');
+      toast.error('Dispatch failed. Please check device connection.');
     } finally {
       setLoading(false);
     }
   };
 
-  const isButtonDisabled = loading || fetchingDevices || devices.length === 0 || !recipient || !message || !selectedDeviceId;
-
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="mb-10">
-        <h1 className="text-3xl font-black text-white tracking-tight">Send Quick SMS</h1>
-        <p className="text-slate-400 mt-2 font-medium">Compose and dispatch a single message to any destination instantly.</p>
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-black text-white tracking-tight">Quick Dispatch</h1>
+          <p className="text-slate-400 mt-2 font-medium">Global SMS routing via your secure Android gateway network.</p>
+        </div>
+        <div className="flex items-center space-x-4 bg-slate-900/50 p-2 pr-6 rounded-2xl border border-slate-800">
+           <div className="h-10 w-10 bg-blue-600/10 rounded-xl flex items-center justify-center text-blue-500">
+              <Zap size={20} />
+           </div>
+           <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 leading-none">Status</p>
+              <p className="text-xs font-bold text-emerald-500 mt-1 uppercase">Instant Routing Active</p>
+           </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Composer Section */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6 shadow-2xl">
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center">
-                <Users size={14} className="mr-2 text-blue-500" /> Recipient Number
-              </label>
-              <input 
-                type="text"
-                placeholder="+1 234 567 8900"
-                className="w-full h-14 bg-slate-950 border border-slate-800 rounded-2xl px-6 text-white focus:border-blue-500 transition-all outline-none"
-                value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center">
-                <Smartphone size={14} className="mr-2 text-blue-500" /> Select Online Device
-              </label>
-              <div className="relative">
-                <select 
-                  className="w-full h-14 bg-slate-950 border border-slate-800 rounded-2xl px-6 text-white focus:border-blue-500 transition-all outline-none appearance-none disabled:opacity-50"
-                  value={selectedDeviceId}
-                  onChange={(e) => setSelectedDeviceId(e.target.value)}
-                  disabled={fetchingDevices || devices.length === 0}
-                >
-                  {fetchingDevices ? (
-                    <option>Loading devices...</option>
-                  ) : devices.length === 0 ? (
-                    <option>No online devices available</option>
-                  ) : (
-                    <>
-                      <option value="">Select a connected device...</option>
-                      {devices.map(device => (
-                        <option key={device.device_id} value={device.device_id}>
-                          {device.device_name || device.phone_model} (SIM 1) - {device.device_id.slice(-6)}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
-                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                  {fetchingDevices ? <Loader2 size={16} className="animate-spin" /> : <Smartphone size={16} />}
-                </div>
-              </div>
-              {devices.length === 0 && !fetchingDevices && (
-                <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mt-2 px-1">
-                  Connect your Android app to enable sending
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center">
-                  <MessageSquare size={14} className="mr-2 text-blue-500" /> Message Body
+          <Card glass className="border-white/5 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-blue-600 to-indigo-600" />
+            <CardContent className="p-10 space-y-8">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center">
+                  <Users size={12} className="mr-2 text-blue-500" /> Destination Number
                 </label>
-                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                  {message.length} / 160 Characters (1 SMS)
-                </span>
+                <input 
+                  type="text"
+                  placeholder="+1 000 000 0000"
+                  className="w-full h-16 bg-slate-950/50 border border-slate-800 rounded-2xl px-8 text-xl font-bold text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none placeholder:text-slate-800"
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                />
               </div>
-              <textarea 
-                placeholder="Type your message here..."
-                rows={5}
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 text-white focus:border-blue-500 transition-all outline-none resize-none"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-            </div>
 
-            <Button 
-              onClick={handleSend}
-              disabled={isButtonDisabled}
-              className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none"
-            >
-              {loading ? (
-                <>Sending... <Loader2 className="ml-2 animate-spin" size={18} /></>
-              ) : (
-                <>Dispatch Message <Send className="ml-2" size={18} /></>
-              )}
-            </Button>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center">
+                      <Smartphone size={12} className="mr-2 text-blue-500" /> Dispatch Gateway
+                    </label>
+                    <select 
+                      className="w-full h-14 bg-slate-950/50 border border-slate-800 rounded-2xl px-6 text-white focus:border-blue-500 transition-all outline-none appearance-none font-bold"
+                      value={selectedDeviceId}
+                      onChange={(e) => setSelectedDeviceId(e.target.value)}
+                    >
+                      {fetchingDevices ? (
+                        <option>Loading systems...</option>
+                      ) : devices.length === 0 ? (
+                        <option>No active gateways</option>
+                      ) : (
+                        <>
+                          <option value="">Select Gateway</option>
+                          {devices.map(d => (
+                            <option key={d.device_id} value={d.device_id}>
+                              {d.device_name || d.phone_model} ({d.device_id.slice(-6).toUpperCase()})
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                 </div>
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center">
+                      <ShieldCheck size={12} className="mr-2 text-blue-500" /> Security
+                    </label>
+                    <div className="h-14 bg-slate-900/30 border border-slate-800 rounded-2xl px-6 flex items-center">
+                       <span className="text-xs font-bold text-slate-400">Encrypted Tunnel</span>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center">
+                    <MessageSquare size={12} className="mr-2 text-blue-500" /> Message Payload
+                  </label>
+                  <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest">
+                    {message.length} Characters
+                  </span>
+                </div>
+                <textarea 
+                  placeholder="Enter your message payload..."
+                  rows={6}
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-3xl p-8 text-white focus:border-blue-500 transition-all outline-none resize-none font-medium leading-relaxed"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                />
+              </div>
+
+              <Button 
+                onClick={handleSend}
+                disabled={loading || fetchingDevices || devices.length === 0}
+                className="w-full h-16 text-xs font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-blue-600/20 bg-blue-600 hover:bg-blue-500 transition-all active:scale-[0.98]"
+              >
+                {loading ? <Loader2 className="animate-spin" /> : "Initiate Dispatch"}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Sidebar / Tips Section */}
         <div className="space-y-6">
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
-            <h3 className="text-sm font-black uppercase tracking-widest text-white mb-4 flex items-center">
-              <Info size={16} className="mr-2 text-blue-500" /> System Status
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-medium">Online Gateways</span>
-                <span className={`text-xs font-black ${devices.length > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {devices.length} Available
-                </span>
-              </div>
-              <div className="h-px bg-slate-800 w-full" />
-              <ul className="space-y-3">
-                <li className="flex items-start space-x-3 text-[11px] text-slate-500 leading-relaxed">
-                  <div className="h-1 w-1 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                  <p>Ensure your Android device has a stable Wi-Fi/Data connection.</p>
+          <Card glass className="border-white/5 bg-gradient-to-b from-blue-600/5 to-transparent">
+            <CardContent className="p-8">
+              <h3 className="text-xs font-black uppercase tracking-widest text-white mb-6 flex items-center">
+                <Info size={16} className="mr-2 text-blue-500" /> Routing Rules
+              </h3>
+              <ul className="space-y-6">
+                <li className="flex gap-4">
+                   <div className="h-6 w-6 rounded-full bg-blue-600/20 text-blue-500 flex items-center justify-center text-[10px] font-black shrink-0">1</div>
+                   <p className="text-xs text-slate-400 leading-relaxed">Messages are encrypted before leaving your secure dashboard.</p>
                 </li>
-                <li className="flex items-start space-x-3 text-[11px] text-slate-500 leading-relaxed">
-                  <div className="h-1 w-1 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                  <p>Messages are routed in real-time via persistent WebSockets.</p>
+                <li className="flex gap-4">
+                   <div className="h-6 w-6 rounded-full bg-blue-600/20 text-blue-500 flex items-center justify-center text-[10px] font-black shrink-0">2</div>
+                   <p className="text-xs text-slate-400 leading-relaxed">Real-time status tracking via secure hardware heartbeat monitor.</p>
                 </li>
               </ul>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="bg-blue-600/5 border border-blue-500/10 p-6 rounded-3xl">
-            <h3 className="text-sm font-black uppercase tracking-widest text-blue-400 mb-4 flex items-center">
-              <History size={16} className="mr-2" /> Live Queue
-            </h3>
-            <div className="space-y-3">
-              <div className="text-[10px] text-slate-600 font-bold uppercase tracking-widest text-center py-4 border border-dashed border-slate-800 rounded-2xl">
-                Waiting for dispatch...
-              </div>
-            </div>
-          </div>
+          <Card glass className="border-white/5">
+             <CardContent className="p-8">
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 flex items-center">
+                   <History size={16} className="mr-2" /> Live Dispatch Log
+                </h3>
+                <div className="space-y-4">
+                   <div className="text-[10px] font-bold text-slate-800 uppercase tracking-widest text-center py-8 border border-dashed border-slate-800 rounded-3xl">
+                      Awaiting payload...
+                   </div>
+                </div>
+             </CardContent>
+          </Card>
         </div>
       </div>
     </div>

@@ -46,6 +46,11 @@ class ContactBase(BaseModel):
 class ContactCreate(ContactBase):
     group_id: int
 
+class ContactUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    email: Optional[EmailStr] = None
+
 class Contact(ContactBase):
     id: int
     group_id: int
@@ -65,6 +70,7 @@ class ContactGroupCreate(ContactGroupBase):
 class ContactGroup(ContactGroupBase):
     id: int
     owner_id: int
+    contact_count: int = 0
     created_at: datetime
     class Config:
         from_attributes = True
@@ -82,6 +88,12 @@ class CampaignBase(BaseModel):
 class CampaignCreate(CampaignBase):
     pass
 
+class CampaignUpdate(BaseModel):
+    name: Optional[str] = None
+    message_template: Optional[str] = None
+    contact_group_id: Optional[int] = None
+    scheduled_at: Optional[datetime] = None
+
 class Campaign(CampaignBase):
     id: int
     owner_id: int
@@ -89,7 +101,17 @@ class Campaign(CampaignBase):
     total_messages: int
     sent_messages: int
     failed_messages: int
+    source_type: str = "MANUAL"
     created_at: datetime
+    class Config:
+        from_attributes = True
+
+class CampaignRecipient(BaseModel):
+    id: int
+    campaign_id: int
+    phone_number: str
+    full_name: Optional[str] = None
+    status: str
     class Config:
         from_attributes = True
 
@@ -150,6 +172,7 @@ class DeviceCreate(DeviceBase):
 class Device(DeviceBase):
     id: int
     is_online: bool
+    owner_id: Optional[int] = None
     last_seen: Optional[datetime] = None
     class Config:
         from_attributes = True
@@ -181,3 +204,10 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+class SMSHistoryResponse(BaseModel):
+    total: int
+    logs: List[SMSLog]
+
+    class Config:
+        from_attributes = True

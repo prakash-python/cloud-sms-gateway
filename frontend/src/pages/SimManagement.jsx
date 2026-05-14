@@ -9,6 +9,9 @@ import toast from 'react-hot-toast';
 const SimManagement = () => {
   const [sims, setSims] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSim, setSelectedSim] = useState(null);
+  const [config, setConfig] = useState({ phone: '', limit: 200 });
 
   const fetchSims = async () => {
     try {
@@ -23,7 +26,33 @@ const SimManagement = () => {
 
   useEffect(() => {
     fetchSims();
+    const interval = setInterval(fetchSims, 5000);
+    return () => clearInterval(interval);
   }, []);
+
+  const handleOpenConfig = (sim) => {
+    setSelectedSim(sim);
+    setConfig({ phone: sim.phone || '', limit: sim.limit || 200 });
+    setIsModalOpen(true);
+  };
+
+  const handleSaveConfig = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/sims/configure', {
+        device_id: selectedSim.device_id,
+        sim_slot: selectedSim.sim_slot,
+        phone_number: config.phone,
+        daily_limit: parseInt(config.limit),
+        carrier_name: selectedSim.carrier
+      });
+      toast.success('SIM configured successfully');
+      setIsModalOpen(false);
+      fetchSims();
+    } catch (err) {
+      toast.error('Failed to update SIM config');
+    }
+  };
 
   return (
     <div className="p-8 space-y-8">
@@ -83,9 +112,14 @@ const SimManagement = () => {
                         {sim.status === 'OK' ? <CheckCircle2 size={14} className="text-emerald-500 mr-2" /> : <AlertTriangle size={14} className="text-yellow-500 mr-2" />}
                         {sim.usage_pct > 95 ? 'Exhausted' : 'Healthy Status'}
                      </div>
-                     <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-blue-500 hover:text-blue-400">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 rounded-lg px-2 text-blue-500 hover:text-blue-400"
+                        onClick={() => handleOpenConfig(sim)}
+                      >
                         <Sliders size={14} />
-                     </Button>
+                      </Button>
                   </div>
                 </div>
               </CardContent>
@@ -97,6 +131,43 @@ const SimManagement = () => {
       {sims.length === 0 && (
         <div className="py-20 text-center">
           <p className="text-slate-500 font-medium">No SIM cards detected. Ensure your Android devices are connected and SIM details are synced.</p>
+        </div>
+      )}
+
+      {isModalOpen && selectedSim && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+           <Card className="w-full max-w-md relative z-10 p-8">
+              <h2 className="text-2xl font-bold text-white mb-6">Configure SIM Card</h2>
+              <form onSubmit={handleSaveConfig} className="space-y-6">
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Phone Number</label>
+                    <input 
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                      placeholder="+91..."
+                      value={config.phone}
+                      onChange={(e) => setConfig({...config, phone: e.target.value})}
+                    />
+                    <p className="text-[10px] text-slate-500 mt-2">Often SIM cards don't expose their number via API. Set it manually here.</p>
+                 </div>
+
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Daily SMS Limit</label>
+                    <input 
+                      type="number"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                      value={config.limit}
+                      onChange={(e) => setConfig({...config, limit: e.target.value})}
+                    />
+                    <p className="text-[10px] text-slate-500 mt-2">Safety quota to prevent carrier blocks. Default is 200.</p>
+                 </div>
+
+                 <div className="flex space-x-4">
+                    <Button type="button" variant="secondary" className="flex-1" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                    <Button type="submit" className="flex-1">Save Config</Button>
+                 </div>
+              </form>
+           </Card>
         </div>
       )}
     </div>

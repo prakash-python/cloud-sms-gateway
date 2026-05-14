@@ -24,17 +24,41 @@ class SmsGatewayService : Service() {
     private val gson = Gson()
     private val handler = Handler(Looper.getMainLooper())
     private var deviceId: String = ""
+    
+    companion object {
+        const val ACTION_STATE_CHANGED = "com.cloudsms.gateway.STATE_CHANGED"
+        const val EXTRA_STATE = "state"
+        
+        const val STATE_DISCONNECTED = "DISCONNECTED"
+        const val STATE_CONNECTING = "CONNECTING"
+        const val STATE_CONNECTED = "CONNECTED"
+        const val STATE_RECONNECTING = "RECONNECTING"
+    }
 
     override fun onCreate() {
         super.onCreate()
         deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-        startForeground(1, createNotification("Connecting to Gateway..."))
+        startForeground(1, createNotification("Starting Gateway..."))
         connectWebSocket()
     }
 
+    private fun broadcastState(state: String) {
+        val intent = Intent(ACTION_STATE_CHANGED)
+        intent.putExtra(EXTRA_STATE, state)
+        sendBroadcast(intent)
+        
+        val notificationText = when(state) {
+            STATE_CONNECTED -> "Gateway Online"
+            STATE_CONNECTING -> "Establishing connection..."
+            STATE_RECONNECTING -> "Syncing securely..."
+            else -> "Service running"
+        }
+        updateNotification(notificationText)
+    }
+
     private fun connectWebSocket() {
+        broadcastState(STATE_CONNECTING)
         val wsUrl = "${Constants.WS_URL}/$deviceId"
-        Log.d(TAG, "Trying to connect to websocket: $wsUrl")
         
         val request = Request.Builder()
             .url(wsUrl)
@@ -43,13 +67,12 @@ class SmsGatewayService : Service() {
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "Connected successfully")
-                updateNotification("Gateway Online")
+                broadcastState(STATE_CONNECTED)
                 sendDeviceInfo()
                 startHeartbeat()
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                Log.d(TAG, "Received: $text")
                 try {
                     val json = gson.fromJson(text, JsonObject::class.java)
                     if (json.get("type").asString == "SEND_SMS") {
@@ -57,7 +80,6 @@ class SmsGatewayService : Service() {
                         val phone = data.get("phone").asString
                         val message = data.get("message").asString
                         val logId = data.get("log_id").asInt
-                        
                         sendSms(phone, message, logId)
                     }
                 } catch (e: Exception) {
@@ -66,16 +88,16 @@ class SmsGatewayService : Service() {
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                Log.d(TAG, "Closing: $reason")
+                broadcastState(STATE_DISCONNECTED)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                Log.d(TAG, "Closed: $reason")
+                broadcastState(STATE_RECONNECTING)
                 reconnect()
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e(TAG, "Connection failed: ${t.message}")
+                broadcastState(STATE_DISCONNECTED)
                 reconnect()
             }
         })
@@ -93,12 +115,8 @@ class SmsGatewayService : Service() {
             val deliveredIntent = PendingIntent.getBroadcast(this, logId, Intent("SMS_DELIVERED").putExtra("log_id", logId), PendingIntent.FLAG_IMMUTABLE)
 
             smsManager.sendTextMessage(phone, null, message, sentIntent, deliveredIntent)
-            Log.d(TAG, "SMS Sent to $phone: $message")
-            
-            // Immediately report back to server that we started sending
             reportDeliveryStatus(logId, "SENT")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to send SMS: ${e.message}")
             reportDeliveryStatus(logId, "FAILED")
         }
     }
@@ -106,10 +124,7 @@ class SmsGatewayService : Service() {
     private fun reportDeliveryStatus(logId: Int, status: String) {
         val report = mapOf(
             "type" to "DELIVERY_REPORT",
-            "data" to mapOf(
-                "log_id" to logId,
-                "status" to status
-            )
+            "data" to mapOf("log_id" to logId, "status" to status)
         )
         webSocket?.send(gson.toJson(report))
     }
@@ -133,6 +148,7 @@ class SmsGatewayService : Service() {
     }
 
     private fun startHeartbeat() {
+        handler.removeCallbacksAndMessages(null)
         handler.postDelayed(object : Runnable {
             override fun run() {
                 val batteryManager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
@@ -140,10 +156,7 @@ class SmsGatewayService : Service() {
                 
                 val heartbeat = mapOf(
                     "type" to "HEARTBEAT",
-                    "data" to mapOf(
-                        "device_id" to deviceId,
-                        "battery_level" to batteryLevel
-                    )
+                    "data" to mapOf("device_id" to deviceId, "battery_level" to batteryLevel)
                 )
                 webSocket?.send(gson.toJson(heartbeat))
                 handler.postDelayed(this, 30000)
@@ -158,7 +171,7 @@ class SmsGatewayService : Service() {
     private fun createNotification(content: String): Notification {
         val channelId = "sms_gateway_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "SMS Gateway Service", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(channelId, "CloudSMS Service", NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
 
@@ -166,10 +179,11 @@ class SmsGatewayService : Service() {
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
         return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("CloudSMS Gateway")
+            .setContentTitle("CloudSMS Gateway Active")
             .setContentText(content)
             .setSmallIcon(android.R.drawable.stat_notify_chat)
             .setContentIntent(pendingIntent)
+            .setOngoing(true)
             .build()
     }
 
@@ -180,8 +194,5 @@ class SmsGatewayService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
-    
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
-    }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 }

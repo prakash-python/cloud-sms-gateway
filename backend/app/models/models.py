@@ -146,6 +146,7 @@ class CampaignRecipient(Base):
     full_name = Column(String)
     status = Column(String, default="PENDING")
     sent_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     error_message = Column(String)
     
     campaign = relationship("Campaign", back_populates="recipients")

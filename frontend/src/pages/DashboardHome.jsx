@@ -39,6 +39,72 @@ const StatCard = ({ icon: Icon, label, value, change, isPositive, color }) => (
 );
 
 const DashboardHome = () => {
+  const [stats, setStats] = React.useState({
+    total: 0,
+    delivered: 0,
+    sent: 0,
+    failed: 0,
+    success_rate: '0%',
+    activity: []
+  });
+  const [onlineCount, setOnlineCount] = React.useState(0);
+  const [loading, setLoading] = React.useState(true);
+  const [quickSend, setQuickSend] = React.useState({ phone: '', message: '' });
+  const [isSending, setIsSending] = React.useState(false);
+  const [onlineDevices, setOnlineDevices] = React.useState([]);
+
+  const fetchStats = async () => {
+    try {
+      const [statsRes, devicesRes] = await Promise.all([
+        import('../services/api').then(m => m.default.get('/sms/stats')),
+        import('../services/api').then(m => m.default.get('/devices/'))
+      ]);
+      setStats(statsRes.data);
+      const active = devicesRes.data.filter(d => d.is_online);
+      setOnlineCount(active.length);
+      setOnlineDevices(active);
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickSend = async () => {
+    if (!quickSend.phone || !quickSend.message) {
+      import('react-hot-toast').then(m => m.default.error('Please fill all fields'));
+      return;
+    }
+    if (onlineDevices.length === 0) {
+      import('react-hot-toast').then(m => m.default.error('No online devices available'));
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const api = await import('../services/api').then(m => m.default);
+      await api.post('/sms/send', {
+        phone_number: quickSend.phone,
+        message: quickSend.message,
+        device_id: onlineDevices[0].device_id,
+        sim_slot: 0
+      });
+      import('react-hot-toast').then(m => m.default.success('Message sent!'));
+      setQuickSend({ phone: '', message: '' });
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to send message';
+      import('react-hot-toast').then(m => m.default.error(msg));
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 10000); // Refresh every 10s
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -49,7 +115,7 @@ const DashboardHome = () => {
         <div className="flex items-center space-x-3">
            <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 flex items-center space-x-2">
              <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
-             <span className="text-sm font-medium">3 Devices Online</span>
+             <span className="text-sm font-medium">{onlineCount} Devices Online</span>
            </div>
         </div>
       </div>
@@ -58,7 +124,7 @@ const DashboardHome = () => {
         <StatCard 
           icon={Send}
           label="Total Messages"
-          value="12,845"
+          value={stats.total.toLocaleString()}
           change="12.5"
           isPositive={true}
           color="blue"
@@ -66,7 +132,7 @@ const DashboardHome = () => {
         <StatCard 
           icon={Smartphone}
           label="Active Devices"
-          value="3"
+          value={onlineCount}
           change="0"
           isPositive={true}
           color="purple"
@@ -74,7 +140,7 @@ const DashboardHome = () => {
         <StatCard 
           icon={CheckCircle2}
           label="Success Rate"
-          value="98.2%"
+          value={stats.success_rate}
           change="2.1"
           isPositive={true}
           color="emerald"
@@ -82,7 +148,7 @@ const DashboardHome = () => {
         <StatCard 
           icon={AlertCircle}
           label="Failed"
-          value="24"
+          value={stats.failed}
           change="5.4"
           isPositive={false}
           color="rose"
@@ -96,13 +162,12 @@ const DashboardHome = () => {
               <h3 className="text-lg font-bold">SMS Activity</h3>
               <select className="bg-slate-800 border-none rounded-lg text-sm px-3 py-1.5 focus:ring-0">
                 <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
               </select>
             </div>
           </CardHeader>
           <CardContent className="h-[350px] w-full pt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
+              <AreaChart data={stats.activity.length > 0 ? stats.activity : data}>
                 <defs>
                   <linearGradient id="colorSent" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
@@ -117,7 +182,6 @@ const DashboardHome = () => {
                   itemStyle={{ color: '#fff' }}
                 />
                 <Area type="monotone" dataKey="sent" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSent)" />
-                <Area type="monotone" dataKey="delivered" stroke="#10b981" strokeWidth={3} fill="none" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -133,6 +197,8 @@ const DashboardHome = () => {
               <input 
                 className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" 
                 placeholder="+1 234 567 890"
+                value={quickSend.phone}
+                onChange={(e) => setQuickSend({ ...quickSend, phone: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -141,10 +207,17 @@ const DashboardHome = () => {
                 rows="4"
                 className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none" 
                 placeholder="Type your message..."
+                value={quickSend.message}
+                onChange={(e) => setQuickSend({ ...quickSend, message: e.target.value })}
               />
             </div>
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98]">
-              Send Now
+            <button 
+              onClick={handleQuickSend}
+              disabled={isSending}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] flex items-center justify-center"
+            >
+              {isSending ? <Clock size={18} className="animate-spin mr-2" /> : <Send size={18} className="mr-2" />}
+              {isSending ? 'Sending...' : 'Send Now'}
             </button>
           </CardContent>
         </Card>

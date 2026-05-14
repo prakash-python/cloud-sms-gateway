@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Plus, Send, Play, Pause, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Zap, Plus, Send, Play, Pause, CheckCircle2, AlertCircle, Clock, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { InputField } from '../components/auth/InputField';
@@ -11,6 +11,7 @@ const CampaignAutomation = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [groups, setGroups] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState(null);
   const [newCampaign, setNewCampaign] = useState({
     name: '',
     message_template: '',
@@ -32,18 +33,35 @@ const CampaignAutomation = () => {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(() => {
+      // Use the functional state check to see if polling is needed
+      setCampaigns(prev => {
+        const isAnyRunning = prev.some(c => c.status === 'RUNNING');
+        if (isAnyRunning) {
+          fetchData();
+        }
+        return prev;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCreateCampaign = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/campaigns/', newCampaign);
-      toast.success('Campaign created successfully');
+      if (editingCampaign) {
+        await api.put(`/campaigns/${editingCampaign.id}`, newCampaign);
+        toast.success('Campaign updated successfully');
+      } else {
+        await api.post('/campaigns/', newCampaign);
+        toast.success('Campaign created successfully');
+      }
       setIsModalOpen(false);
+      setEditingCampaign(null);
       setNewCampaign({ name: '', message_template: '', contact_group_id: '' });
       fetchData();
     } catch (err) {
-      toast.error('Failed to create campaign');
+      toast.error(editingCampaign ? 'Failed to update campaign' : 'Failed to create campaign');
     }
   };
 
@@ -57,6 +75,27 @@ const CampaignAutomation = () => {
     }
   };
 
+  const handleDeleteCampaign = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this campaign?')) return;
+    try {
+      await api.delete(`/campaigns/${id}`);
+      toast.success('Campaign deleted');
+      fetchData();
+    } catch (err) {
+      toast.error('Failed to delete campaign');
+    }
+  };
+
+  const openEditModal = (camp) => {
+    setEditingCampaign(camp);
+    setNewCampaign({
+      name: camp.name,
+      message_template: camp.message_template,
+      contact_group_id: camp.contact_group_id
+    });
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
@@ -64,7 +103,7 @@ const CampaignAutomation = () => {
           <h1 className="text-3xl font-bold tracking-tight text-white">SMS Campaigns</h1>
           <p className="text-slate-400 mt-1">Automate bulk SMS delivery and track real-time performance.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="rounded-xl">
+        <Button onClick={() => { setEditingCampaign(null); setNewCampaign({ name: '', message_template: '', contact_group_id: '' }); setIsModalOpen(true); }} className="rounded-xl">
           <Plus size={18} className="mr-2" /> Create Campaign
         </Button>
       </div>
@@ -75,22 +114,32 @@ const CampaignAutomation = () => {
             <Card glass className="overflow-hidden">
                <div className="flex flex-col lg:flex-row">
                   <div className="flex-1 p-8">
-                     <div className="flex items-center space-x-4 mb-4">
-                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-                          camp.status === 'RUNNING' ? 'bg-blue-600 animate-pulse' : 
-                          camp.status === 'COMPLETED' ? 'bg-emerald-600' : 'bg-slate-800'
-                        }`}>
-                           <Zap size={20} className="text-white" />
-                        </div>
-                        <div>
-                           <h3 className="text-xl font-bold text-white">{camp.name}</h3>
-                           <div className="flex items-center text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
-                              <span className={`h-2 w-2 rounded-full mr-2 ${
-                                camp.status === 'RUNNING' ? 'bg-blue-500' : 
-                                camp.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-slate-500'
-                              }`} />
-                              {camp.status}
+                     <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-4">
+                           <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                             camp.status === 'RUNNING' ? 'bg-blue-600 animate-pulse' : 
+                             camp.status === 'COMPLETED' ? 'bg-emerald-600' : 'bg-slate-800'
+                           }`}>
+                              <Zap size={20} className="text-white" />
                            </div>
+                           <div>
+                              <h3 className="text-xl font-bold text-white">{camp.name}</h3>
+                              <div className="flex items-center text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
+                                 <span className={`h-2 w-2 rounded-full mr-2 ${
+                                   camp.status === 'RUNNING' ? 'bg-blue-500' : 
+                                   camp.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-slate-500'
+                                 }`} />
+                                 {camp.status}
+                              </div>
+                           </div>
+                        </div>
+                        <div className="flex space-x-2">
+                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditModal(camp)}>
+                              <Edit2 size={14} className="text-slate-400 hover:text-white" />
+                           </Button>
+                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleDeleteCampaign(camp.id)}>
+                              <Trash2 size={14} className="text-slate-400 hover:text-red-500" />
+                           </Button>
                         </div>
                      </div>
                      <p className="text-slate-400 text-sm italic line-clamp-2">"{camp.message_template}"</p>
@@ -111,9 +160,10 @@ const CampaignAutomation = () => {
                      </div>
                      
                      <div className="flex gap-3">
-                        {camp.status === 'PENDING' && (
+                        {(camp.status === 'PENDING' || camp.status === 'FAILED') && (
                           <Button onClick={() => handleStartCampaign(camp.id)} className="flex-1 h-10 rounded-lg">
-                            <Play size={16} className="mr-2" /> Start
+                            <Play size={16} className="mr-2" /> 
+                            {camp.status === 'FAILED' ? 'Retry' : 'Start'}
                           </Button>
                         )}
                         <Button variant="secondary" className="flex-1 h-10 rounded-lg">
@@ -129,10 +179,10 @@ const CampaignAutomation = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => { setIsModalOpen(false); setEditingCampaign(null); }} />
            <Card className="w-full max-w-2xl relative z-10 overflow-hidden">
               <div className="p-8">
-                <h2 className="text-2xl font-bold text-white mb-6">Launch New Campaign</h2>
+                <h2 className="text-2xl font-bold text-white mb-6">{editingCampaign ? 'Edit Campaign' : 'Launch New Campaign'}</h2>
                 <form onSubmit={handleCreateCampaign} className="space-y-6">
                    <InputField 
                       label="Campaign Name" 
@@ -168,8 +218,8 @@ const CampaignAutomation = () => {
                    </div>
 
                    <div className="flex space-x-4 pt-4">
-                      <Button type="button" variant="secondary" className="flex-1" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                      <Button type="submit" className="flex-1">Create Campaign</Button>
+                      <Button type="button" variant="secondary" className="flex-1" onClick={() => { setIsModalOpen(false); setEditingCampaign(null); }}>Cancel</Button>
+                      <Button type="submit" className="flex-1">{editingCampaign ? 'Update Campaign' : 'Create Campaign'}</Button>
                    </div>
                 </form>
               </div>
