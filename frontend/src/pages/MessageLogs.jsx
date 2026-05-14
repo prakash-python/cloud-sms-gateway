@@ -24,9 +24,10 @@ const MessageLogs = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      if (activeTab === 'individual') {
+      if (activeTab === 'individual' || activeTab === 'database') {
         const skip = (currentPage - 1) * limit;
-        const res = await api.get('/sms/history', { params: { skip, limit } });
+        const source = activeTab === 'database' ? 'database' : 'individual';
+        const res = await api.get('/sms/history', { params: { skip, limit, source } });
         setLogs(res.data.logs);
         setTotalLogs(res.data.total);
       } else if (activeTab === 'manual_group' || activeTab === 'csv_group') {
@@ -261,13 +262,68 @@ const MessageLogs = () => {
           </div>
         )}
         {activeTab === 'database' && (
-          <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-slate-800 rounded-[40px] bg-slate-900/10">
-            <div className="h-20 w-20 rounded-[28px] bg-slate-800/50 flex items-center justify-center text-slate-700 mb-6">
-              <Database size={32} />
+          <Card glass className="overflow-hidden border-white/5">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-900/50 border-b border-white/5">
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Name</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Recipient</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Message</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Status</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {logs.map((log) => (
+                  <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                    <td className="p-6">
+                      <p className="text-sm font-bold text-white">{log.full_name || 'N/A'}</p>
+                    </td>
+                    <td className="p-6">
+                      <p className="text-sm font-bold text-slate-300">{log.phone_number}</p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Gateway #{log.device_id}</p>
+                    </td>
+                    <td className="p-6">
+                      <p className="text-sm text-slate-300 max-w-md truncate">{log.message}</p>
+                    </td>
+                    <td className="p-6">
+                      <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getStatusColor(log.status)}`}>
+                        {log.status}
+                      </div>
+                    </td>
+                    <td className="p-6">
+                      <p className="text-xs text-slate-400 font-medium">{new Date(log.created_at).toLocaleString()}</p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="p-4 border-t border-white/5 flex items-center justify-between bg-slate-900/30">
+               <div className="text-xs text-slate-500 font-bold uppercase tracking-widest">
+                  Showing {(currentPage-1)*limit + 1} - {Math.min(currentPage*limit, totalLogs)} of {totalLogs} Logs
+               </div>
+               <div className="flex space-x-2">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="h-8 rounded-lg text-[10px] font-black uppercase px-4"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => prev - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="h-8 rounded-lg text-[10px] font-black uppercase px-4"
+                    disabled={currentPage * limit >= totalLogs}
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                  >
+                    Next
+                  </Button>
+               </div>
             </div>
-            <h3 className="text-xl font-black text-slate-300">Coming Soon</h3>
-            <p className="text-sm text-slate-500 mt-2 font-medium">This logging module is currently under development.</p>
-          </div>
+          </Card>
         )}
       </div>
 

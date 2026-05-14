@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Database, Server, Shield, Table, Phone, User, 
   CheckCircle2, AlertCircle, Loader2, Play, 
-  Save, RefreshCw, Send, CheckSquare, Square
+  Save, RefreshCw, Send, CheckSquare, Square,
+  Eye, EyeOff
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -36,6 +37,8 @@ const DatabaseIntegration = () => {
   const [availableColumns, setAvailableColumns] = useState([]);
   const [fetchingTables, setFetchingTables] = useState(false);
   const [fetchingColumns, setFetchingColumns] = useState(false);
+  const [showUrl, setShowUrl] = useState(false);
+
   useEffect(() => {
     fetchConfig();
   }, []);
@@ -94,6 +97,8 @@ const DatabaseIntegration = () => {
     try {
       await api.post('/integrations/db/save', config);
       toast.success('Configuration saved');
+      // Automatically fetch data after saving
+      handleFetch();
     } catch (err) {
       toast.error('Failed to save configuration');
     } finally {
@@ -150,12 +155,16 @@ const DatabaseIntegration = () => {
       }
 
       for (const phone of selectedNumbers) {
+        // Find the record to get the name
+        const contact = externalData.find(d => d.phone === phone);
         try {
           await api.post('/sms/send', {
             phone_number: phone,
+            full_name: contact?.name || 'Unknown',
             message: message,
             device_id: onlineDevice.device_id,
-            sim_slot: 0
+            sim_slot: 0,
+            source: 'database'
           });
           success++;
         } catch (e) {
@@ -163,6 +172,8 @@ const DatabaseIntegration = () => {
         }
       }
       toast.success(`Bulk Send Complete: ${success} Sent, ${failed} Failed`);
+      setMessage('');
+      setSelectedNumbers([]);
     } catch (err) {
       toast.error('Failed to start bulk send');
     } finally {
@@ -189,13 +200,25 @@ const DatabaseIntegration = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-               <label className="text-[10px] font-black uppercase tracking-widest text-blue-500">Quick Connect URL (Recommended)</label>
-               <input 
-                  value={config.connection_url}
-                  onChange={(e) => setConfig({...config, connection_url: e.target.value})}
-                  className="w-full bg-blue-500/5 border border-blue-500/20 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/30"
-                  placeholder="postgresql://user:pass@host:port/dbname"
-               />
+               <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-blue-500">Quick Connect URL (Recommended)</label>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowUrl(!showUrl)}
+                    className="text-slate-500 hover:text-blue-500 transition-colors"
+                  >
+                    {showUrl ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+               </div>
+               <div className="relative">
+                  <input 
+                    type={showUrl ? "text" : "password"}
+                    value={config.connection_url}
+                    onChange={(e) => setConfig({...config, connection_url: e.target.value})}
+                    className="w-full bg-blue-500/5 border border-blue-500/20 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 pr-10"
+                    placeholder="postgresql://user:pass@host:port/dbname"
+                  />
+               </div>
                <p className="text-[9px] text-slate-500 italic">Easiest for Render, AWS, and Supabase.</p>
             </div>
 
@@ -342,7 +365,7 @@ const DatabaseIntegration = () => {
                 onClick={handleSave}
                 disabled={loading}
               >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : 'Save'}
+                {loading ? <Loader2 size={16} className="animate-spin" /> : 'Save & Sync Data'}
               </Button>
             </div>
           </CardContent>

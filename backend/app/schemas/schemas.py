@@ -185,12 +185,16 @@ class SMSCreate(BaseModel):
     message: str
     device_id: str
     sim_slot: int = 0
+    full_name: Optional[str] = None
+    source: Optional[str] = "individual"
 
 class SMSLog(BaseModel):
     id: int
     phone_number: str
+    full_name: Optional[str] = None
     message: str
     status: str
+    source: Optional[str] = None
     error_message: Optional[str] = None
     created_at: datetime
     device_id: Optional[int] = None

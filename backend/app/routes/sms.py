@@ -4,13 +4,19 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import models
 from ..schemas import schemas
+from ..auth.utils import get_current_user
 from app.websocket.manager import manager
+from typing import Optional
 import logging
 
 router = APIRouter()
 
 @router.post("/send", response_model=schemas.SMSLog)
-async def send_single_sms(sms_data: schemas.SMSCreate, db: Session = Depends(get_db)):
+async def send_single_sms(
+    sms_data: schemas.SMSCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     # 1. Check if device is online via WebSocket manager
     online_devices = await manager.get_online_devices()
     if sms_data.device_id not in online_devices:
@@ -23,10 +29,13 @@ async def send_single_sms(sms_data: schemas.SMSCreate, db: Session = Depends(get
 
     # 3. Create SMS Log entry
     new_log = models.SMSLog(
+        owner_id=current_user.id,
         phone_number=sms_data.phone_number,
+        full_name=sms_data.full_name,
         message=sms_data.message,
         device_id=device.id,
-        status="PENDING"
+        status="PENDING",
+        source=sms_data.source
     )
     db.add(new_log)
     db.commit()
@@ -59,9 +68,19 @@ async def send_single_sms(sms_data: schemas.SMSCreate, db: Session = Depends(get
     return new_log
 
 @router.get("/history", response_model=schemas.SMSHistoryResponse)
-def get_sms_history(db: Session = Depends(get_db), skip: int = 0, limit: int = 10):
-    total = db.query(models.SMSLog).count()
-    logs = db.query(models.SMSLog).order_by(models.SMSLog.created_at.desc()).offset(skip).limit(limit).all()
+def get_sms_history(
+    db: Session = Depends(get_db), 
+    skip: int = 0, 
+    limit: int = 10,
+    source: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user)
+):
+    query = db.query(models.SMSLog).filter(models.SMSLog.owner_id == current_user.id)
+    if source:
+        query = query.filter(models.SMSLog.source == source)
+        
+    total = query.count()
+    logs = query.order_by(models.SMSLog.created_at.desc()).offset(skip).limit(limit).all()
     return {"total": total, "logs": logs}
 
 @router.get("/stats")

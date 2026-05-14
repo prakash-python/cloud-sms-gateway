@@ -12,10 +12,15 @@ def patch_db():
         with engine.connect() as conn:
             print("Checking for missing columns...")
             
-            # Add columns if they don't exist
+            # Database Connections table
             conn.execute(text("ALTER TABLE database_connections ADD COLUMN IF NOT EXISTS first_name_column VARCHAR"))
             conn.execute(text("ALTER TABLE database_connections ADD COLUMN IF NOT EXISTS last_name_column VARCHAR"))
             conn.execute(text("ALTER TABLE database_connections ADD COLUMN IF NOT EXISTS connection_url VARCHAR"))
+            
+            # SMS Logs table
+            conn.execute(text("ALTER TABLE sms_logs ADD COLUMN IF NOT EXISTS full_name VARCHAR"))
+            conn.execute(text("ALTER TABLE sms_logs ADD COLUMN IF NOT EXISTS source VARCHAR DEFAULT 'individual'"))
+            
             conn.commit()
             
         print("Database patched successfully!")

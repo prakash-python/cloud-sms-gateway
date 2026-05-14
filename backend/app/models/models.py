@@ -160,8 +160,10 @@ class SMSLog(Base):
     device_id = Column(Integer, ForeignKey("devices.id"))
     sim_slot = Column(Integer, default=0)
     phone_number = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
     message = Column(Text, nullable=False)
     status = Column(String, default="PENDING")
+    source = Column(String, default="individual") # individual, database, campaign
     error_message = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
